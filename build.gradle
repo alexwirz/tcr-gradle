@@ -1,0 +1,49 @@
+plugins {
+    id "org.ajoberstar.grgit" version "3.0.0"
+    id 'java'
+}
+
+repositories {
+    jcenter()
+}
+
+dependencies {
+    testImplementation 'org.junit.jupiter:junit-jupiter-api:5.3.1'
+    testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.3.1'
+    testCompile 'org.assertj:assertj-core:3.11.1'
+}
+
+test {
+    useJUnitPlatform()
+}
+
+def timestamp() {
+    def date = new Date()
+    return date.format('yyyyMMddHHmmss')
+}
+
+def commit() {
+    grgit.add(patterns: ["src"])
+    grgit.commit(message: "TCR @ " + timestamp())
+    grgit.close();
+}
+
+def revert() {
+    grgit.reset(mode: "hard")
+    grgit.clean(directories: true)
+}
+
+task "tcr" {
+    dependsOn 'clean'
+    dependsOn 'test'
+    tasks.findByName('test').mustRunAfter 'clean'
+    doLast {
+        commit()
+    }
+}
+
+gradle.buildFinished { result ->
+    if (result.failure) {
+        revert()
+    }
+}
